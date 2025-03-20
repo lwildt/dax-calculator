@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAX Derivate Limit-Rechner</title>
+    <meta name="theme-color" content="#007aff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DAX Rechner">
+    <link rel="manifest" href="#manifest">
+    <script>
+        // Inline manifest for PWA
+        const manifestContent = {
+            "name": "DAX Derivate Rechner",
+            "short_name": "DAX Rechner",
+            "description": "Berechnet Limit-Kurse für DAX Derivate",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#f5f5f5",
+            "theme_color": "#007aff",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIxMy45MiIgeTE9IjEwLjYyIiB4Mj0iMTA3LjA4IiB5Mj0iMTI4LjAyIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMDA3YWZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA0M2FmIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyNCIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0zNSA4OWg2TTQ1IDcwbDEwLTMwIDEwIDMwbS0xNSAwaDEwTTcwIDg5aDEwbTEwLTU5Yy0xOCAwLTIwIDIwLTIwIDI5LjVzMiAyOS41IDIwIDI5LjUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=",
+                    "sizes": "144x144",
+                    "type": "image/svg+xml",
+                    "purpose": "any"
+                }
+            ]
+        };
+        
+        // Create a manifest URL
+        const manifestString = JSON.stringify(manifestContent);
+        const manifestURL = URL.createObjectURL(new Blob([manifestString], {type: 'application/json'}));
+        
+        // Replace the href with the generated URL
+        document.querySelector('link[rel="manifest"]').href = manifestURL;
+        
+        // Service worker registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function() {
+                    // Service worker registered (will fail on local files, which is ok)
+                    console.log('Service worker registered');
+                }).catch(function(error) {
+                    // Local usage, this error is expected and can be ignored
+                    console.log('Service worker registration failed, this is expected for local file usage');
+                });
+            });
+        }
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin: 0 0 16px 0;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+        }
+        button:active {
+            background-color: #0062cc;
+        }
+        .result {
+            font-weight: bold;
+            font-size: 1.2rem;
+            background-color: #f0f0f0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            text-align: center;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 16px 0 8px 0;
+        }
+        .info {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>DAX Derivate Limit-Rechner</h1>
+        
+        <div>
+            <label for="knockout">Knockout-Schwelle:</label>
+            <input type="number" id="knockout" placeholder="z.B. 22675">
+            
+            <label for="bezugsverhaeltnis">Bezugsverhältnis:</label>
+            <input type="number" id="bezugsverhaeltnis" placeholder="z.B. 0.01" step="0.001">
+            
+            <label for="current-dax">Aktueller DAX-Stand:</label>
+            <input type="number" id="current-dax" placeholder="z.B. 22915">
+            
+            <label for="current-price">Aktueller Briefkurs (€):</label>
+            <input type="number" id="current-price" placeholder="z.B. 3.02" step="0.01">
+        </div>
+        
+        <div class="section-title">Zielkursberechnung</div>
+        <div>
+            <label for="target-dax">Ziel DAX-Stand:</label>
+            <input type="number" id="target-dax" placeholder="z.B. 22980">
+            
+            <button id="calculate">Limit berechnen</button>
+        </div>
+        
+        <div class="result" id="result">
+            Limit-Preis: --,-- €
+        </div>
+        
+        <div class="info" id="info">
+            (Aufschlag: --,-- € | Faktor: --,--x)
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="section-title">Umgekehrte Berechnung</div>
+        <div>
+            <label for="target-price">Gewünschter Verkaufspreis (€):</label>
+            <input type="number" id="target-price" placeholder="z.B. 3.84" step="0.01">
+            
+            <button id="calculate-reverse">DAX-Stand berechnen</button>
+        </div>
+        
+        <div class="result" id="reverse-result">
+            Benötigter DAX-Stand: -----
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('calculate').addEventListener('click', function() {
+            calculateLimit();
+        });
+        
+        document.getElementById('calculate-reverse').addEventListener('click', function() {
+            calculateReverse();
+        });
+        
+        function calculateLimit() {
+            // Get input values
+            const knockout = parseFloat(document.getElementById('knockout').value);
+            const bezugsverhaeltnis = parseFloat(document.getElementById('bezugsverhaeltnis').value);
+            const currentDax = parseFloat(document.getElementById('current-dax').value);
+            const currentPrice = parseFloat(document.getElementById('current-price').value);
+            const targetDax = parseFloat(document.getElementById('target-dax').value);
+            
+            // Check if all inputs are valid
+            if (isNaN(knockout) || isNaN(bezugsverhaeltnis) || isNaN(currentDax) || 
+                isNaN(currentPrice) || isNaN(targetDax)) {
+                alert("Bitte alle Felder ausfüllen");
+                return;
+            }
+            
+            // Calculate theoretical values
+            const theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
+            const theoreticalTarget = (targetDax - knockout) * bezugsverhaeltnis;
+            
+            // Calculate with fixed premium
+            const premium = currentPrice - theoreticalCurrent;
+            const targetPriceWithPremium = theoreticalTarget + premium;
+            
+            // Calculate with factor
+            const factor = currentPrice / theoreticalCurrent;
+            const targetPriceWithFactor = theoreticalTarget * factor;
+            
+            // Display average of both methods
+            const averageTarget = (targetPriceWithPremium + targetPriceWithFactor) / 2;
+            
+            document.getElementById('result').innerHTML = 
+                `Limit-Preis: ${averageTarget.toFixed(2)} €`;
+            
+            document.getElementById('info').innerHTML = 
+                `(Aufschlag: ${premium.toFixed(2)} € | Faktor: ${factor.toFixed(2)}x)<br>` +
+                `Mit Aufschlag: ${targetPriceWithPremium.toFixed(2)} € | ` +
+                `Mit Faktor: ${targetPriceWithFactor.toFixed(2)} €`;
+        }
+        
+        function calculateReverse() {
+            // Get input values
+            const knockout = parseFloat(document.getElementById('knockout').value);
+            const bezugsverhaeltnis = parseFloat(document.getElementById('bezugsverhaeltnis').value);
+            const currentDax = parseFloat(document.getElementById('current-dax').value);
+            const currentPrice = parseFloat(document.getElementById('current-price').value);
+            const targetPrice = parseFloat(document.getElementById('target-price').value);
+            
+            // Check if all inputs are valid
+            if (isNaN(knockout) || isNaN(bezugsverhaeltnis) || isNaN(currentDax) || 
+                isNaN(currentPrice) || isNaN(targetPrice)) {
+                alert("Bitte alle Felder ausfüllen");
+                return;
+            }
+            
+            // Calculate theoretical current value
+            const theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
+            
+            // Calculate with fixed premium
+            const premium = currentPrice - theoreticalCurrent;
+            const daxWithPremium = ((targetPrice - premium) / bezugsverhaeltnis) + knockout;
+            
+            // Calculate with factor
+            const factor = currentPrice / theoreticalCurrent;
+            const daxWithFactor = ((targetPrice / factor) / bezugsverhaeltnis) + knockout;
+            
+            // Display average of both methods
+            const averageDax = Math.round((daxWithPremium + daxWithFactor) / 2);
+            
+            document.getElementById('reverse-result').innerHTML = 
+                `Benötigter DAX-Stand: ${averageDax}`;
+        }
+    </script>
+
+    <!-- Add install instructions that appear on page load -->
+    <script>
+        // Add installation instructions
+        document.addEventListener('DOMContentLoaded', function() {
+            const installInstructions = document.createElement('div');
+            installInstructions.className = 'card';
+            installInstructions.innerHTML = `
+                <div class="section-title">Installation auf dem Handy</div>
+                <div style="font-size: 0.9rem; margin-bottom: 16px;">
+                    <strong>iPhone:</strong><br>
+                    1. Öffne diese Seite in Safari<br>
+                    2. Tippe auf <span style="font-size: 1.2rem;">⬆️</span> (Teilen-Button)<br>
+                    3. Scrolle und wähle "Zum Home-Bildschirm"<br><br>
+                    
+                    <strong>Android:</strong><br>
+                    1. Öffne diese Seite in Chrome<br>
+                    2. Tippe auf ⋮ (Menü)<br>
+                    3. Wähle "Zum Startbildschirm hinzufügen"
+                </div>
+                <button id="hideInstructions">Verstanden</button>
+            `;
+            document.body.appendChild(installInstructions);
+            
+            document.getElementById('hideInstructions').addEventListener('click', function() {
+                installInstructions.style.display = 'none';
+                // Remember that the user has dismissed the instructions
+                localStorage.setItem('installInstructionsDismissed', 'true');
+            });
+            
+            // Check if user has already dismissed the instructions
+            if (localStorage.getItem('installInstructionsDismissed') === 'true') {
+                installInstructions.style.display = 'none';
+            }
+        });
+    </script>
+    
+    <!-- Simple service worker script to make the app installable -->
+    <script id="sw.js" type="text/plain">
+        // Create a minimal service worker script
+        self.addEventListener('fetch', function(event) {
+            event.respondWith(
+                fetch(event.request).catch(function() {
+                    return caches.match(event.request);
+                })
+            );
+        });
+        
+        self.addEventListener('install', function(event) {
+            self.skipWaiting();
+        });
+    </script>
+    
+    <!-- Write service worker file when needed -->
+    <script>
+        // Create the service worker file on first load
+        if ('serviceWorker' in navigator) {
+            const swContent = document.getElementById('sw.js').textContent;
+            const swBlob = new Blob([swContent], {type: 'text/javascript'});
+            const swURL = URL.createObjectURL(swBlob);
+            
+            // Download the service worker script
+            const downloadLink = document.createElement('a');
+            downloadLink.href = swURL;
+            downloadLink.download = 'sw.js';
+            
+            // Prompt download if needed (on first usage)
+            if (!localStorage.getItem('swDownloaded')) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const downloadPrompt = document.createElement('div');
+                    downloadPrompt.style.display = 'none';
+                    document.body.appendChild(downloadPrompt);
+                    
+                    // For local usage, offer manual download
+                    if (window.location.protocol === 'file:') {
+                        localStorage.setItem('swDownloaded', 'true');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
