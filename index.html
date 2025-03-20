@@ -193,20 +193,44 @@
                 return;
             }
             
-            // Calculate theoretical values
-            const theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
-            const theoreticalTarget = (targetDax - knockout) * bezugsverhaeltnis;
+            // Determine if it's a Long or Short position
+            const isLong = currentDax > knockout;
+            
+            // Calculate theoretical values based on position type
+            let theoreticalCurrent, theoreticalTarget;
+            
+            if (isLong) {
+                // Long position: DAX > Knockout
+                theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
+                theoreticalTarget = (targetDax - knockout) * bezugsverhaeltnis;
+            } else {
+                // Short position: DAX < Knockout
+                theoreticalCurrent = (knockout - currentDax) * bezugsverhaeltnis;
+                theoreticalTarget = (knockout - targetDax) * bezugsverhaeltnis;
+            }
             
             // Calculate with fixed premium
             const premium = currentPrice - theoreticalCurrent;
             const targetPriceWithPremium = theoreticalTarget + premium;
             
-            // Calculate with factor
-            const factor = currentPrice / theoreticalCurrent;
-            const targetPriceWithFactor = theoreticalTarget * factor;
+            // Calculate with factor (only if theoretical values are not near zero)
+            let factor, targetPriceWithFactor;
+            if (Math.abs(theoreticalCurrent) > 0.0001) {
+                factor = currentPrice / theoreticalCurrent;
+                targetPriceWithFactor = theoreticalTarget * factor;
+            } else {
+                factor = 0;
+                targetPriceWithFactor = 0;
+            }
             
-            // Display average of both methods
-            const averageTarget = (targetPriceWithPremium + targetPriceWithFactor) / 2;
+            // Display average of both methods (if factor method is valid)
+            let averageTarget;
+            if (Math.abs(theoreticalCurrent) > 0.0001 && factor > 0) {
+                averageTarget = (targetPriceWithPremium + targetPriceWithFactor) / 2;
+            } else {
+                // Use only premium method if factor method is invalid
+                averageTarget = targetPriceWithPremium;
+            }
             
             document.getElementById('result').innerHTML = 
                 `Limit-Preis: ${averageTarget.toFixed(2)} €`;
@@ -215,7 +239,6 @@
                 `(Aufschlag: ${premium.toFixed(2)} € | Faktor: ${factor.toFixed(2)}x)<br>` +
                 `Mit Aufschlag: ${targetPriceWithPremium.toFixed(2)} € | ` +
                 `Mit Faktor: ${targetPriceWithFactor.toFixed(2)} €`;
-        }
         
         function calculateReverse() {
             // Get input values
@@ -232,19 +255,57 @@
                 return;
             }
             
-            // Calculate theoretical current value
-            const theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
+            // Determine if it's a Long or Short position
+            const isLong = currentDax > knockout;
+            
+            // Calculate theoretical current value based on position type
+            let theoreticalCurrent;
+            if (isLong) {
+                // Long position: DAX > Knockout
+                theoreticalCurrent = (currentDax - knockout) * bezugsverhaeltnis;
+            } else {
+                // Short position: DAX < Knockout
+                theoreticalCurrent = (knockout - currentDax) * bezugsverhaeltnis;
+            }
             
             // Calculate with fixed premium
             const premium = currentPrice - theoreticalCurrent;
-            const daxWithPremium = ((targetPrice - premium) / bezugsverhaeltnis) + knockout;
+            let daxWithPremium;
             
-            // Calculate with factor
-            const factor = currentPrice / theoreticalCurrent;
-            const daxWithFactor = ((targetPrice / factor) / bezugsverhaeltnis) + knockout;
+            if (isLong) {
+                // For Long positions
+                daxWithPremium = ((targetPrice - premium) / bezugsverhaeltnis) + knockout;
+            } else {
+                // For Short positions
+                daxWithPremium = knockout - ((targetPrice - premium) / bezugsverhaeltnis);
+            }
             
-            // Display average of both methods
-            const averageDax = Math.round((daxWithPremium + daxWithFactor) / 2);
+            // Calculate with factor (only if theoretical values are not near zero)
+            let daxWithFactor;
+            let factor = 0;
+            
+            if (Math.abs(theoreticalCurrent) > 0.0001) {
+                factor = currentPrice / theoreticalCurrent;
+                
+                if (isLong) {
+                    // For Long positions
+                    daxWithFactor = ((targetPrice / factor) / bezugsverhaeltnis) + knockout;
+                } else {
+                    // For Short positions
+                    daxWithFactor = knockout - ((targetPrice / factor) / bezugsverhaeltnis);
+                }
+            } else {
+                daxWithFactor = daxWithPremium; // Fallback to premium method
+            }
+            
+            // Display average of both methods (if factor method is valid)
+            let averageDax;
+            if (Math.abs(theoreticalCurrent) > 0.0001 && factor > 0) {
+                averageDax = Math.round((daxWithPremium + daxWithFactor) / 2);
+            } else {
+                // Use only premium method if factor method is invalid
+                averageDax = Math.round(daxWithPremium);
+            }
             
             document.getElementById('reverse-result').innerHTML = 
                 `Benötigter DAX-Stand: ${averageDax}`;
